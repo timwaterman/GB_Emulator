@@ -1,7 +1,7 @@
 gbemu: emu.o
 	gcc -g -Wall emu.o -o gbemu
 
-emu.o: emu.c
+emu.o: emu.c opcodes.h
 	gcc -c -Wall -g emu.c
 
 .PHONY: clean all

@@ -7,6 +7,7 @@ Emulator Main
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "opcodes.h"
 
 //die with an error
 void die(const char *message) {
@@ -42,10 +43,15 @@ int main(int argc, char **argv) {
 		die("Fopen failed\n");
 	}
 
+	//establish size and buffer
 	int size = getSize(rom);
-
 	char buffer[size];
 	memset(buffer, 0, sizeof(buffer));
+
+	//read the file into buffer to use as input stream
+	fread(buffer, size, 1, rom); 
+
+	printf("%x in hex is %d in decimal\n\n", buffer[0] & 0xFF, buffer[0]);
 
 
 	return 0;
