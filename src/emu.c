@@ -38,7 +38,7 @@ int main(int argc, char **argv) {
 		exit(1);
 	}
 
-	registers reg;
+	registers regs;
 
 	FILE *rom = fopen(argv[1], "r");
 
@@ -54,7 +54,16 @@ int main(int argc, char **argv) {
 	//read the file into buffer to use as input stream
 	fread(buffer, size, 1, rom); 
 
-	initRegisters(&reg); //initialize all the registers
+	initRegisters(&regs); //initialize all the registers
+
+
+	while(regs.pc < sizeof buffer) {
+		fprintf(stderr, "PC is %hd\n", regs.pc);
+
+		opcode op = decodeInstruction(buffer[regs.pc]);
+		executeInstruction(&regs, op, buffer);
+		printRegisters(&regs);
+	}
 
 
 	return 0;
