@@ -9,6 +9,7 @@ Emulator Main
 #include <string.h>
 #include "opcodes.h"
 
+
 //die with an error
 void die(const char *message) {
 
@@ -37,6 +38,8 @@ int main(int argc, char **argv) {
 		exit(1);
 	}
 
+	registers reg;
+
 	FILE *rom = fopen(argv[1], "r");
 
 	if (rom == NULL) {
@@ -51,7 +54,7 @@ int main(int argc, char **argv) {
 	//read the file into buffer to use as input stream
 	fread(buffer, size, 1, rom); 
 
-	printf("%x in hex is %d in decimal\n\n", buffer[0] & 0xFF, buffer[0]);
+	initRegisters(&reg); //initialize all the registers
 
 
 	return 0;
