@@ -9,6 +9,8 @@ OpCode Header
 
 typedef struct memory {
 	unsigned char a;
+	unsigned char h;
+	unsigned char l;
 	unsigned short pc;
 	unsigned short sp;
 } registers;
@@ -17,7 +19,11 @@ typedef enum {
 	INVALID, //invalid base case
 
 
-	LD_SP //load stack pointer with a value
+	LD_SP, //load stack pointer with a value
+	LD_HL_DEC_A,
+	LD_HL,
+
+	XOR_A
 
 } opcode;
 
