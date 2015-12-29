@@ -79,10 +79,12 @@ void executeInstruction(registers *regs, opcode op, const char *program) {
 			// addr = addr << 4;
 			// addr = addr | regs->l;
 			writeToMemory_8(addr, regs->a);
-			if (regs->h > 0) 
-				--regs->h;
-			else
+			if (regs->l > 0) 
 				--regs->l;
+			else {
+				--regs->h;
+				regs->l = 0xFF;
+			}
 			regs->pc++;
 		}
 			break;
