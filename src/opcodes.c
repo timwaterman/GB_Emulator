@@ -11,8 +11,9 @@ OpCode Source code
 
 extern unsigned char memoryspace[54000];
 
- void writeToMemory_8(unsigned char address, unsigned char data) {
+ void writeToMemory_8(unsigned short address, unsigned char data) {
 
+ 	fprintf(stderr, "Writing %x to address %x\n", data, address);
  	memoryspace[address] = data;
 
  	return;
@@ -52,6 +53,15 @@ Will not modify the program, only the registers
 void executeInstruction(registers *regs, opcode op, const char *program) {
 
 	switch (op) {
+		case JR_NZ: {//jump if zero flag is cleared
+			char offset = program[regs->pc + 1]; //the offset is in the next byte
+			if((regs->f >> 7) & 1) {
+				regs->pc += 2;
+			}
+			else
+				regs->pc += 2 + offset;
+			break;
+		}
 		case LD_HL:
 			regs->h = program[regs->pc + 2];
 			regs->l = program[regs->pc + 1];
@@ -61,10 +71,20 @@ void executeInstruction(registers *regs, opcode op, const char *program) {
 			regs->sp = program[(regs->pc) + 1]; //store next value in stack pointer
 			regs->pc += 3; //increment pc by 3 bytes
 			break;
-		case LD_HL_DEC_A: //TODO: This needs to wrap around to L after H is 0
-			writeToMemory_8(regs->h, regs->a);
-			--regs->h;
+		case LD_HL_DEC_A: {
+			unsigned short high = regs->h;
+			unsigned short low = regs->l;
+			unsigned short addr = (high << 8) | low;
+			// addr = addr | regs->h;
+			// addr = addr << 4;
+			// addr = addr | regs->l;
+			writeToMemory_8(addr, regs->a);
+			if (regs->h > 0) 
+				--regs->h;
+			else
+				--regs->l;
 			regs->pc++;
+		}
 			break;
 		case XOR_A: //0xAF, XOR Register A
 			regs->a ^= regs->a;
@@ -72,10 +92,10 @@ void executeInstruction(registers *regs, opcode op, const char *program) {
 			break;
 		case BIT_7H: //0xCB7C, check high bit of H
 			if( (regs->h >> 7) & 1) { //if it's one, clear the zero flag
-				regs->f = (regs->f >> 7) & 0; 
+				regs->f = ((regs->f >> 7) & 0) << 7; 
 			}
 			else {
-				regs->f = (regs->f >> 7) | 1; //zero flag is on
+				regs->f = ((regs->f >> 7) | 1) << 7; //zero flag is on
 			}
 
 			regs->pc += 2;
@@ -100,16 +120,20 @@ opcode decodeInstruction(const char op, const char nextop) {
 	unsigned char next = nextop;
 
 	switch (hex) {
+		case 0x20:
+			//fprintf(stderr, "JR NZ\n");
+			return JR_NZ;
+			break;
 		case 0x21:
-			fprintf(stderr, "LD HL\n");
+			//fprintf(stderr, "LD HL\n");
 			return LD_HL;
 			break;
 		case 0x31:
-			fprintf(stderr, "LD SP\n");
+			//fprintf(stderr, "LD SP\n");
 			return LD_SP;
 			break;
 		case 0x32:
-			fprintf(stderr, "LD_HL_DEC_A\n");
+			//fprintf(stderr, "LD_HL_DEC_A\n");
 			return LD_HL_DEC_A;
 			break;
 		case 0xAF:
@@ -117,10 +141,10 @@ opcode decodeInstruction(const char op, const char nextop) {
 			return XOR_A;
 			break;
 		case 0xCB://second set of opcodes
-			fprintf(stderr, "SECOND SET\n");
+			//fprintf(stderr, "SECOND SET\n");
 			switch (next) {
 				case 0x7C:
-					fprintf(stderr, "CHECKING BIT 7\n");
+			//		fprintf(stderr, "CHECKING BIT 7\n");
 					return BIT_7H;
 					break;
 				default:
