@@ -61,7 +61,7 @@ void executeInstruction(registers *regs, opcode op, const char *program) {
 			regs->sp = program[(regs->pc) + 1]; //store next value in stack pointer
 			regs->pc += 3; //increment pc by 3 bytes
 			break;
-		case LD_HL_DEC_A:
+		case LD_HL_DEC_A: //TODO: This needs to wrap around to L after H is 0
 			writeToMemory_8(regs->h, regs->a);
 			--regs->h;
 			regs->pc++;
