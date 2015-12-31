@@ -59,11 +59,11 @@ int main(int argc, char **argv) {
 
 
 	while(regs.pc < sizeof buffer) {
-		//fprintf(stderr, "PC is %hd\n", regs.pc);
+		fprintf(stderr, "PC is %hd\n", regs.pc);
 
 		opcode op = decodeInstruction(buffer[regs.pc], buffer[regs.pc + 1] );
 		executeInstruction(&regs, op, buffer);
-		//printRegisters(&regs);
+		printRegisters(&regs);
 	}
 
 

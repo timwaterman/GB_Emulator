@@ -13,7 +13,7 @@ extern unsigned char memoryspace[54000];
 
  void writeToMemory_8(unsigned short address, unsigned char data) {
 
- 	fprintf(stderr, "Writing %x to address %x\n", data, address);
+ 	//fprintf(stderr, "Writing %x to address %x\n", data, address);
  	memoryspace[address] = data;
 
  	return;
@@ -25,6 +25,7 @@ void printRegisters(registers *regs) {
 	fprintf(stderr, "REGISTERS:\n");
 	fprintf(stderr, "SP = %x\n", regs->sp);
 	fprintf(stderr, "A = %u\n", regs->a);
+	fprintf(stderr, "C = %u\n", regs->c);
 	fprintf(stderr, "H = %x\n", regs->h);
 	fprintf(stderr, "L = %x\n", regs->l);
 	fprintf(stderr, "F = %x\n", regs->f);
@@ -53,6 +54,10 @@ Will not modify the program, only the registers
 void executeInstruction(registers *regs, opcode op, const char *program) {
 
 	switch (op) {
+		case LD_C:
+			regs->c = program[regs->pc + 1];
+			regs->pc += 2;
+			break;
 		case JR_NZ: {//jump if zero flag is cleared
 			char offset = program[regs->pc + 1]; //the offset is in the next byte
 			if((regs->f >> 7) & 1) {
@@ -75,9 +80,7 @@ void executeInstruction(registers *regs, opcode op, const char *program) {
 			unsigned short high = regs->h;
 			unsigned short low = regs->l;
 			unsigned short addr = (high << 8) | low;
-			// addr = addr | regs->h;
-			// addr = addr << 4;
-			// addr = addr | regs->l;
+
 			writeToMemory_8(addr, regs->a);
 			if (regs->l > 0) 
 				--regs->l;
@@ -103,7 +106,7 @@ void executeInstruction(registers *regs, opcode op, const char *program) {
 			regs->pc += 2;
 			break;
 		default:
-			fprintf(stderr, "%s\n", "OPCODE Not yet implemented");
+			fprintf(stderr, "OPCODE %x Not yet implemented\n", program[regs->pc]);
 			exit(1);
 	}//end main switch
 
@@ -122,20 +125,24 @@ opcode decodeInstruction(const char op, const char nextop) {
 	unsigned char next = nextop;
 
 	switch (hex) {
+		case 0x0E:
+			fprintf(stderr, "LD C\n");
+			return LD_C;
+			break;
 		case 0x20:
-			//fprintf(stderr, "JR NZ\n");
+			fprintf(stderr, "JR NZ\n");
 			return JR_NZ;
 			break;
 		case 0x21:
-			//fprintf(stderr, "LD HL\n");
+			fprintf(stderr, "LD HL\n");
 			return LD_HL;
 			break;
 		case 0x31:
-			//fprintf(stderr, "LD SP\n");
+			fprintf(stderr, "LD SP\n");
 			return LD_SP;
 			break;
 		case 0x32:
-			//fprintf(stderr, "LD_HL_DEC_A\n");
+			fprintf(stderr, "LD_HL_DEC_A\n");
 			return LD_HL_DEC_A;
 			break;
 		case 0xAF:
