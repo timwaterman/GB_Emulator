@@ -13,7 +13,7 @@ extern unsigned char memoryspace[54000];
 
  void writeToMemory_8(unsigned short address, unsigned char data) {
 
- 	//fprintf(stderr, "Writing %x to address %x\n", data, address);
+ 	fprintf(stderr, "Writing %x to address %x\n", data, address);
  	memoryspace[address] = data;
 
  	return;
@@ -54,6 +54,10 @@ Will not modify the program, only the registers
 void executeInstruction(registers *regs, opcode op, const char *program) {
 
 	switch (op) {
+		case INC_C:
+			regs->c++;
+			regs->pc++;
+			break;
 		case LD_C:
 			regs->c = program[regs->pc + 1];
 			regs->pc += 2;
@@ -95,6 +99,15 @@ void executeInstruction(registers *regs, opcode op, const char *program) {
 			regs->a = program[regs->pc + 1];
 			regs->pc += 2;
 			break;
+		case LD_HL_A: {
+			unsigned short high = regs->h;
+			unsigned short low = regs->l;
+			unsigned short addr = (high << 8) | low;
+
+			writeToMemory_8(addr, regs->a);
+			regs->pc++;
+		}
+			break;
 		case XOR_A: //0xAF, XOR Register A
 			regs->a ^= regs->a;
 			(regs->pc)++;
@@ -109,8 +122,20 @@ void executeInstruction(registers *regs, opcode op, const char *program) {
 
 			regs->pc += 2;
 			break;
+		case LDH_ADDR_A: {//load A into the 8-bit address given (+ 0xFF00)
+			unsigned short addr = 0xFF00 + (unsigned char)program[regs->pc + 1];
+			writeToMemory_8(addr, regs->a);
+			regs->pc += 2;
+		}
+			break;
+		case LD_C_ADDR_A: {//load contents of A into addr inside C + 0xFF00
+			unsigned short addr = 0xFF00 + regs->c;
+			writeToMemory_8(addr, regs->a);
+			regs->pc++;
+		}
+			break;
 		default:
-			fprintf(stderr, "OPCODE %x Not yet implemented\n", program[regs->pc]);
+			fprintf(stderr, "OPCODE %02x Not yet implemented\n", (unsigned char)program[regs->pc]);
 			exit(1);
 	}//end main switch
 
@@ -129,6 +154,10 @@ opcode decodeInstruction(const char op, const char nextop) {
 	unsigned char next = nextop;
 
 	switch (hex) {
+		case 0x0C:
+			fprintf(stderr, "INC C\n");
+			return INC_C;
+			break;
 		case 0x0E:
 			fprintf(stderr, "LD C\n");
 			return LD_C;
@@ -153,6 +182,10 @@ opcode decodeInstruction(const char op, const char nextop) {
 			fprintf(stderr, "LD A\n");
 			return LD_A;
 			break;
+		case 0x77:
+			fprintf(stderr, "LD HL A\n");
+			return LD_HL_A;
+			break;
 		case 0xAF:
 			fprintf(stderr, "XOR A\n");
 			return XOR_A;
@@ -167,6 +200,14 @@ opcode decodeInstruction(const char op, const char nextop) {
 				default:
 					break;
 			}
+			break;
+		case 0xE0:
+			fprintf(stderr, "LDH ADDR A\n");
+			return LDH_ADDR_A;
+			break;
+		case 0xE2:
+			fprintf(stderr, "LD C ADDR A\n");
+			return LD_C_ADDR_A;
 			break;
 		default:
 			break;
