@@ -91,6 +91,10 @@ void executeInstruction(registers *regs, opcode op, const char *program) {
 			regs->pc++;
 		}
 			break;
+		case LD_A: //0x3E
+			regs->a = program[regs->pc + 1];
+			regs->pc += 2;
+			break;
 		case XOR_A: //0xAF, XOR Register A
 			regs->a ^= regs->a;
 			(regs->pc)++;
@@ -144,6 +148,10 @@ opcode decodeInstruction(const char op, const char nextop) {
 		case 0x32:
 			fprintf(stderr, "LD_HL_DEC_A\n");
 			return LD_HL_DEC_A;
+			break;
+		case 0x3E:
+			fprintf(stderr, "LD A\n");
+			return LD_A;
 			break;
 		case 0xAF:
 			fprintf(stderr, "XOR A\n");
