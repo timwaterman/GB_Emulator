@@ -24,11 +24,13 @@ void printRegisters(registers *regs) {
 
 	fprintf(stderr, "REGISTERS:\n");
 	fprintf(stderr, "SP = %x\n", regs->sp);
-	fprintf(stderr, "A = %u\n", regs->a);
-	fprintf(stderr, "C = %u\n", regs->c);
-	fprintf(stderr, "H = %x\n", regs->h);
-	fprintf(stderr, "L = %x\n", regs->l);
-	fprintf(stderr, "F = %x\n", regs->f);
+	fprintf(stderr, "A = %02x\n", regs->a);
+	fprintf(stderr, "C = %02x\n", regs->c);
+	fprintf(stderr, "D = %02x\n", regs->d);
+	fprintf(stderr, "E = %02x\n", regs->e);
+	fprintf(stderr, "H = %02x\n", regs->h);
+	fprintf(stderr, "L = %02x\n", regs->l);
+	fprintf(stderr, "F = %02x\n", regs->f);
 
 
 }
@@ -51,6 +53,7 @@ takes in the instruction opcode and the registers,
 and then executes the instruction
 Will not modify the program, only the registers
 */
+
 void executeInstruction(registers *regs, opcode op, const char *program) {
 
 	switch (op) {
@@ -61,6 +64,11 @@ void executeInstruction(registers *regs, opcode op, const char *program) {
 		case LD_C:
 			regs->c = program[regs->pc + 1];
 			regs->pc += 2;
+			break;
+		case LD_DE:
+			regs->d = program[regs->pc + 2];
+			regs->e = program[regs->pc + 1];
+			regs->pc += 3;
 			break;
 		case JR_NZ: {//jump if zero flag is cleared
 			char offset = program[regs->pc + 1]; //the offset is in the next byte
@@ -142,6 +150,44 @@ void executeInstruction(registers *regs, opcode op, const char *program) {
 		return;
 }
 
+/*--------------------------------------------------*
+* Start of OpCode decoding functions.  				*
+* There are 5 functions, each that will decode 		*
+* a specific section of the opcode table. Each 		*
+* function deals with 64 specific opcodes, as 		*
+* designated by the range in its suffix				*
+*---------------------------------------------------*/
+
+// Matches instructions with opcodes 0x00 - 0x3F
+opcode fetchInstruction_03(const char op) {
+
+	return INVALID;
+}
+
+// Matches instructions with opcodes 0x40 - 0x7F
+opcode fetchInstruction_47(const char op) {
+
+	return INVALID;
+}
+
+// Matches instructions with opcodes 0x80 - 0xBF
+opcode fetchInstruction_8B(const char op) {
+
+	return INVALID;
+}
+
+// Matches instructions with opcodes 0xC0 - 0xFF
+// except for 0xCB, which maps to the extended set
+opcode fetchInstruction_CF(const char op) {
+
+	return INVALID;
+}
+
+// Handles all extended opcodes (may need to break this up)
+opcode fetchInstruction_ext(const char op, const char nextop) {
+
+	return INVALID;
+}
 
 /*
 decodes the instruction, returns the enum opcode
@@ -161,6 +207,10 @@ opcode decodeInstruction(const char op, const char nextop) {
 		case 0x0E:
 			fprintf(stderr, "LD C\n");
 			return LD_C;
+			break;
+		case 0x11:
+			fprintf(stderr, "LD DE\n");
+			return LD_DE;
 			break;
 		case 0x20:
 			fprintf(stderr, "JR NZ\n");

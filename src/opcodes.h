@@ -67,6 +67,7 @@ typedef enum {
 
 } opcode;
 
+
 //write 1 byte to memory (8 bits). Most memory writes are this
 void writeToMemory_8(unsigned short address, unsigned char data);
 
