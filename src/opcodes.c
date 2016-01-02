@@ -19,6 +19,13 @@ extern unsigned char memoryspace[54000];
  	return;
  }
 
+ void readFromMemory_8(unsigned char *reg, unsigned short address) {
+
+ 	*reg = memoryspace[address];
+
+ 	return;
+ }
+
 
 void printRegisters(registers *regs) {
 
@@ -69,6 +76,15 @@ void executeInstruction(registers *regs, opcode op, const char *program) {
 			regs->d = program[regs->pc + 2];
 			regs->e = program[regs->pc + 1];
 			regs->pc += 3;
+			break;
+		case LD_A_DE: {//0x1A. Load into A addr stored in DE + 0xFF00
+			unsigned short high = regs->d;
+			unsigned short low = regs->l;
+			unsigned short addr = (high << 8) | low;
+			addr += 0xFF00;
+			readFromMemory_8(&(regs->a), addr);
+			regs->pc++;
+		}
 			break;
 		case JR_NZ: {//jump if zero flag is cleared
 			char offset = program[regs->pc + 1]; //the offset is in the next byte
@@ -161,43 +177,7 @@ void executeInstruction(registers *regs, opcode op, const char *program) {
 // Matches instructions with opcodes 0x00 - 0x3F
 opcode fetchInstruction_03(const char op) {
 
-	return INVALID;
-}
-
-// Matches instructions with opcodes 0x40 - 0x7F
-opcode fetchInstruction_47(const char op) {
-
-	return INVALID;
-}
-
-// Matches instructions with opcodes 0x80 - 0xBF
-opcode fetchInstruction_8B(const char op) {
-
-	return INVALID;
-}
-
-// Matches instructions with opcodes 0xC0 - 0xFF
-// except for 0xCB, which maps to the extended set
-opcode fetchInstruction_CF(const char op) {
-
-	return INVALID;
-}
-
-// Handles all extended opcodes (may need to break this up)
-opcode fetchInstruction_ext(const char op, const char nextop) {
-
-	return INVALID;
-}
-
-/*
-decodes the instruction, returns the enum opcode
-Nextop is only used in the case of an extended operation,
-which starts with opcode 0xCB
-*/
-opcode decodeInstruction(const char op, const char nextop) {
-
 	unsigned char hex = op;
-	unsigned char next = nextop;
 
 	switch (hex) {
 		case 0x0C:
@@ -211,6 +191,10 @@ opcode decodeInstruction(const char op, const char nextop) {
 		case 0x11:
 			fprintf(stderr, "LD DE\n");
 			return LD_DE;
+			break;
+		case 0x1A:
+			fprintf(stderr, "LD A DE\n");
+			return LD_A_DE;
 			break;
 		case 0x20:
 			fprintf(stderr, "JR NZ\n");
@@ -232,25 +216,52 @@ opcode decodeInstruction(const char op, const char nextop) {
 			fprintf(stderr, "LD A\n");
 			return LD_A;
 			break;
+		default:
+			break;
+		}
+
+	return INVALID;
+}
+
+// Matches instructions with opcodes 0x40 - 0x7F
+opcode fetchInstruction_47(const char op) {
+
+	unsigned char hex = op;
+
+	switch (hex) {
 		case 0x77:
 			fprintf(stderr, "LD HL A\n");
 			return LD_HL_A;
 			break;
+		default:
+			break;
+	}
+
+	return INVALID;
+}
+
+// Matches instructions with opcodes 0x80 - 0xBF
+opcode fetchInstruction_8B(const char op) {
+
+	unsigned char hex = op;
+
+	switch (hex) {
 		case 0xAF:
 			fprintf(stderr, "XOR A\n");
 			return XOR_A;
 			break;
-		case 0xCB://second set of opcodes
-			//fprintf(stderr, "SECOND SET\n");
-			switch (next) {
-				case 0x7C:
-			//		fprintf(stderr, "CHECKING BIT 7\n");
-					return BIT_7H;
-					break;
-				default:
-					break;
-			}
-			break;
+	}
+
+	return INVALID;
+}
+
+// Matches instructions with opcodes 0xC0 - 0xFF
+// except for 0xCB, which maps to the extended set
+opcode fetchInstruction_CF(const char op) {
+
+	unsigned char hex = op;
+
+	switch (hex) {
 		case 0xE0:
 			fprintf(stderr, "LDH ADDR A\n");
 			return LDH_ADDR_A;
@@ -261,8 +272,55 @@ opcode decodeInstruction(const char op, const char nextop) {
 			break;
 		default:
 			break;
+
 	}
 
 	return INVALID;
+}
+
+// Handles all extended opcodes (may need to break this up)
+opcode fetchInstruction_ext(const char nextop) {
+
+	unsigned char next = nextop;
+
+	switch (next) {
+		case 0x7C:
+			fprintf(stderr, "CHECKING BIT 7\n");
+			return BIT_7H;
+			break;
+		default:
+			break;
+	}
+
+	return INVALID;
+}
+
+/*
+decodes the instruction, returns the enum opcode
+Nextop is only used in the case of an extended operation,
+which starts with opcode 0xCB
+*/
+opcode decodeInstruction(const char op, const char nextop) {
+
+	unsigned char hex = op;
+
+	if (hex >= 0x00 && hex < 0x40) {
+		return fetchInstruction_03(op);
+	}
+
+	if (hex >= 0x40 && hex < 0x80) {
+		return fetchInstruction_47(op);
+	}
+
+	if (hex >= 0x80 && hex < 0xC0) {
+		return fetchInstruction_8B(op);
+	}
+
+	if (hex >= 0xC0 && hex != 0xCB) {
+		return fetchInstruction_CF(op);
+	}
+
+	return fetchInstruction_ext(nextop);
+
 }
 

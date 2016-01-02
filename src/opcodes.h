@@ -77,6 +77,14 @@ void initRegisters(registers *regs);
 
 void executeInstruction(registers *regs, opcode op, const char *program);
 
+
+//FETCHING AND DECODING FUNCTIONS
+opcode fetchInstruction_03(const char op);
+opcode fetchInstruction_47(const char op);
+opcode fetchInstruction_8B(const char op);
+opcode fetchInstruction_CF(const char op);
+opcode fetchInstruction_ext(const char nextop);
+
 opcode decodeInstruction(const char op, const char nextop);
 
 #endif
