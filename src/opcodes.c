@@ -9,12 +9,12 @@ OpCode Source code
 #include <string.h>
 #include "opcodes.h"
 
-extern unsigned char memoryspace[54000];
+extern unsigned char *memoryspace;
 
  void writeToMemory_8(unsigned short address, unsigned char data) {
 
- 	fprintf(stderr, "Writing %x to address %x\n", data, address);
- 	memoryspace[address] = data;
+ 	fprintf(stderr, "Writing %x to address %u\n", data, address);
+ 	memoryspace[(unsigned short)address] = data;
 
  	return;
  }
@@ -146,6 +146,25 @@ void executeInstruction(registers *regs, opcode op, const char *program) {
 
 			regs->pc += 2;
 			break;
+		case CALL: { //we need to store the next pc in sp - 1 and sp - 2, then move the sp down 2
+			//we then will move the current pc to the address given in the next 16 bit value
+			regs->pc += 3; //go to next instruction
+			unsigned short loc = regs->pc;
+			unsigned char hi = (loc & 0xFF00) >> 4; //take the upper half
+			unsigned char lo = loc & 0x00FF; //take the lower half
+			writeToMemory_8(regs->sp - 1, hi);
+			writeToMemory_8(regs->sp - 2, lo);
+			regs->sp -= 2;
+			regs->pc -= 3;
+			unsigned char low = program[regs->pc + 1];
+			unsigned char high = program[regs->pc + 2];
+			hi = high;
+			lo = low;
+			unsigned short addr = (hi << 8) | lo;
+			regs->pc = addr; //use the address starting from the original pc + 1
+			fprintf(stderr, "Setting PC to %x\n", regs->pc);
+		}
+			break;
 		case LDH_ADDR_A: {//load A into the 8-bit address given (+ 0xFF00)
 			unsigned short addr = 0xFF00 + (unsigned char)program[regs->pc + 1];
 			writeToMemory_8(addr, regs->a);
@@ -262,6 +281,10 @@ opcode fetchInstruction_CF(const char op) {
 	unsigned char hex = op;
 
 	switch (hex) {
+		case 0xCD:
+			fprintf(stderr, "CALL\n");
+			return CALL;
+			break;
 		case 0xE0:
 			fprintf(stderr, "LDH ADDR A\n");
 			return LDH_ADDR_A;

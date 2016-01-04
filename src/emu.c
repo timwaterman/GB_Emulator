@@ -9,7 +9,7 @@ Emulator Main
 #include <string.h>
 #include "opcodes.h"
 
-unsigned char memoryspace[54000];
+unsigned char *memoryspace;
 
 //die with an error
 void die(const char *message) {
@@ -39,6 +39,8 @@ int main(int argc, char **argv) {
 		exit(1);
 	}
 
+	memoryspace = malloc(66000);
+
 	registers regs;
 
 	FILE *rom = fopen(argv[1], "r");
@@ -59,12 +61,15 @@ int main(int argc, char **argv) {
 
 
 	while(regs.pc < sizeof buffer) {
-		fprintf(stderr, "PC is %hd\n", regs.pc);
+		fprintf(stderr, "PC is %u\n", regs.pc);
 
 		opcode op = decodeInstruction(buffer[regs.pc], buffer[regs.pc + 1] );
 		executeInstruction(&regs, op, buffer);
 		printRegisters(&regs);
+		fprintf(stderr, "PC is %u\n", regs.pc);
 	}
+
+	fprintf(stderr, "Size of buffer is %u\n", size);
 
 
 	return 0;
