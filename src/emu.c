@@ -39,7 +39,7 @@ int main(int argc, char **argv) {
 		exit(1);
 	}
 
-	memoryspace = malloc(66000);
+	memoryspace = malloc(0xFFFF); //create the memory space of 64K
 
 	registers regs;
 
@@ -58,6 +58,7 @@ int main(int argc, char **argv) {
 	fread(buffer, size, 1, rom); 
 
 	initRegisters(&regs); //initialize all the registers
+	loadLogo();
 
 
 	while(regs.pc < sizeof buffer) {

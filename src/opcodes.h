@@ -7,6 +7,11 @@ OpCode Header
 #ifndef __OPCODES_H__
 #define __OPCODES_H__
 
+#define ZERO_FLAG 0x80
+#define SUBTRACT_FLAG 0x40
+#define HALF_CARRY_FLAG 0x20
+#define CARRY_FLAG 0x10
+
 typedef struct memory {
 
 	unsigned char a;
@@ -63,10 +68,14 @@ typedef enum {
 	LD_HL_SP, LD_SP_HL, LD_A_16, EI, /*No FC-FD,*/ CP, RST_38, //0xF8 - 0xFF   
 
 	//extended ops
-	BIT_7H
+	RL_C, BIT_7H
 
 } opcode;
 
+void clearFlags(registers *regs, unsigned char flags);
+void setFlags(registers *regs, unsigned char flags);
+
+void loadLogo();
 
 //write 1 byte to memory (8 bits). Most memory writes are this
 void writeToMemory_8(unsigned short address, unsigned char data);
