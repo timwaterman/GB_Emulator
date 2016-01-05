@@ -160,15 +160,31 @@ and then executes the instruction
 Will not modify the program, only the registers
 */
 
+//@TODO: Add flag instructions to each of these commands
 void executeInstruction(registers *regs, opcode op, const char *program) {
 
 	switch (op) {
+		case DEC_B: //0x05, decrement B
+			regs->b--;
+			if (regs->b == 0) {
+				setFlags(regs, ZERO_FLAG);
+			}
+
+			setFlags(regs, SUBTRACT_FLAG);
+			regs->pc++;
+			break;
 		case LD_B: //0x06 load next byte into register b
 			regs->b = (unsigned char)program[regs->pc + 1];
 			regs->pc += 2;
 			break;
 		case INC_C:
+			clearFlags(regs, SUBTRACT_FLAG | ZERO_FLAG);
+			if (regs->c == 0xFF) //if it would wrap
+				setFlags(regs, HALF_CARRY_FLAG);
 			regs->c++;
+
+			if (regs->c == 0)
+				setFlags(regs, ZERO_FLAG);
 			regs->pc++;
 			break;
 		case LD_C:
@@ -180,13 +196,23 @@ void executeInstruction(registers *regs, opcode op, const char *program) {
 			regs->e = program[regs->pc + 1];
 			regs->pc += 3;
 			break;
+		case RLA: //0x17 Rotate A left
+			clearFlags(regs, ZERO_FLAG | HALF_CARRY_FLAG | SUBTRACT_FLAG);
+
+			if ((regs-> a >> 7) & 1) { //if the msb is one
+				setFlags(regs, CARRY_FLAG);
+				regs->a = (regs->a << 1) | 1;
+			}
+			else { //else msb is 0, just shift it left
+				regs->a = regs->a << 1;
+			}
+			regs->pc++;
+			break;
 		case LD_A_DE: {//0x1A. Load into A addr stored in DE + 0xFF00
 			unsigned short high = regs->d;
 			unsigned short low = regs->e;
 			unsigned short addr = (high << 8) | low;
-			//fprintf(stderr, "Address is %04x\n", addr);
-			//addr += 0xFF00;
-			//fprintf(stderr, "Address is %04x\n", addr);
+
 			readFromMemory_8(&(regs->a), addr);
 			regs->pc++;
 		}
@@ -242,10 +268,16 @@ void executeInstruction(registers *regs, opcode op, const char *program) {
 		}
 			break;
 		case XOR_A: //0xAF, XOR Register A
+			clearFlags(regs, SUBTRACT_FLAG | HALF_CARRY_FLAG | CARRY_FLAG);
 			regs->a ^= regs->a;
+
+			if (!regs->a)
+				setFlags(regs, ZERO_FLAG);
 			(regs->pc)++;
 			break;
 		case BIT_7H: //0xCB7C, check high bit of H
+			clearFlags(regs, SUBTRACT_FLAG);
+			setFlags(regs, HALF_CARRY_FLAG);
 			if( (regs->h >> 7) & 1) { //if it's one, clear the zero flag
 				//regs->f = ((regs->f >> 7) & 0) << 7; 
 				clearFlags(regs, ZERO_FLAG);
@@ -256,6 +288,12 @@ void executeInstruction(registers *regs, opcode op, const char *program) {
 			}
 
 			regs->pc += 2;
+			break;
+		case POP_BC: //0xC1, pop BC from the stack
+			regs->c = memoryspace[regs->sp];
+			regs->b = memoryspace[regs->sp + 1];
+			regs->sp += 2;
+			regs->pc++;
 			break;
 		case PUSH_BC: //0xC5, push BC onto the stack, B first, then C
 			memoryspace[regs->sp - 1] = regs->b;
@@ -334,6 +372,10 @@ opcode fetchInstruction_03(const char op) {
 	unsigned char hex = op;
 
 	switch (hex) {
+		case 0x05:
+			fprintf(stderr, "DEC B\n");
+			return DEC_B;
+			break;
 		case 0x06:
 			fprintf(stderr, "LD B\n");
 			return LD_B;
@@ -349,6 +391,10 @@ opcode fetchInstruction_03(const char op) {
 		case 0x11:
 			fprintf(stderr, "LD DE\n");
 			return LD_DE;
+			break;
+		case 0x17:
+			fprintf(stderr, "RLA\n");
+			return RLA;
 			break;
 		case 0x1A:
 			fprintf(stderr, "LD A DE\n");
@@ -424,6 +470,10 @@ opcode fetchInstruction_CF(const char op) {
 	unsigned char hex = op;
 
 	switch (hex) {
+		case 0xC1:
+			fprintf(stderr, "POP BC\n");
+			return POP_BC;
+			break;
 		case 0xC5:
 			fprintf(stderr, "PUSH BC\n");
 			return PUSH_BC;
