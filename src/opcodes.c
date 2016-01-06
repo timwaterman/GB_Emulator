@@ -160,7 +160,6 @@ and then executes the instruction
 Will not modify the program, only the registers
 */
 
-//@TODO: Add flag instructions to each of these commands
 void executeInstruction(registers *regs, opcode op, const char *program) {
 
 	switch (op) {
@@ -185,6 +184,15 @@ void executeInstruction(registers *regs, opcode op, const char *program) {
 
 			if (regs->c == 0)
 				setFlags(regs, ZERO_FLAG);
+			regs->pc++;
+			break;
+		case DEC_C:
+			clearFlags(regs, ZERO_FLAG | HALF_CARRY_FLAG);
+			regs->c--;
+
+			if(regs->c == 0)
+				setFlags(regs, ZERO_FLAG);
+
 			regs->pc++;
 			break;
 		case LD_C:
@@ -265,6 +273,19 @@ void executeInstruction(registers *regs, opcode op, const char *program) {
 			}
 			regs->pc++;
 			break;
+		case JR_Z: {//0x28, jump if ZEROFLAG is set
+			signed char offset = program[regs->pc + 1];
+
+			if ((regs->f >> 7) & 1)
+				regs->pc += offset;
+			else
+				regs->pc += 2;
+		}
+			break;
+		case LD_L: //0x2E, LOAD INTO L
+			regs->l = program[regs->pc + 1];
+			regs->pc += 2;
+			break;
 		case LD_SP: //0x31, LOAD SP
 			regs->sp = program[(regs->pc) + 1]; //store next value in stack pointer
 			regs->pc += 3; //increment pc by 3 bytes
@@ -283,6 +304,17 @@ void executeInstruction(registers *regs, opcode op, const char *program) {
 			}
 			regs->pc++;
 		}
+			break;
+		case DEC_A:
+			setFlags(regs, SUBTRACT_FLAG);
+			regs->a--;
+
+			if (regs->a == 0)
+				setFlags(regs, ZERO_FLAG);
+			else
+				clearFlags(regs, ZERO_FLAG);
+
+			regs->pc++;
 			break;
 		case LD_A: //0x3E
 			regs->a = program[regs->pc + 1];
@@ -398,6 +430,26 @@ void executeInstruction(registers *regs, opcode op, const char *program) {
 
 		}
 			break;
+
+		case LD_ADDR_A: {
+			//grab high and low bits of the address
+			unsigned char low = program[regs->pc + 1];
+			unsigned char high = program[regs->pc + 2];
+
+			unsigned short lo = low;
+			unsigned short hi = high;
+			unsigned short addr = (hi << 8) | lo;
+			writeToMemory_8(addr, regs->a);
+			regs->pc += 3;
+		}
+			break;
+		 case CP: //compare value given next to register A, set ZFLAG if equal
+		 	clearFlags(regs, SUBTRACT_FLAG);
+		 	if( (unsigned char)program[regs->pc + 1] == regs->a)
+		 		setFlags(regs, ZERO_FLAG);
+
+		 	regs->pc += 2;
+		 	break;
 		default:
 			fprintf(stderr, "OPCODE %02x Not yet implemented\n", (unsigned char)program[regs->pc]);
 			exit(1);
@@ -431,6 +483,10 @@ opcode fetchInstruction_03(const char op) {
 		case 0x0C:
 			fprintf(stderr, "INC C\n");
 			return INC_C;
+			break;
+		case 0x0D:
+			fprintf(stderr, "DEC C\n");
+			return DEC_C;
 			break;
 		case 0x0E:
 			fprintf(stderr, "LD C\n");
@@ -468,6 +524,14 @@ opcode fetchInstruction_03(const char op) {
 			fprintf(stderr, "INC HL\n");
 			return INC_HL;
 			break;
+		case 0x28:
+			fprintf(stderr, "JR Z\n");
+			return JR_Z;
+			break;
+		case 0x2E:
+			fprintf(stderr, "LD L\n");
+			return LD_L;
+			break;
 		case 0x31:
 			fprintf(stderr, "LD SP\n");
 			return LD_SP;
@@ -475,6 +539,10 @@ opcode fetchInstruction_03(const char op) {
 		case 0x32:
 			fprintf(stderr, "LD_HL_DEC_A\n");
 			return LD_HL_DEC_A;
+			break;
+		case 0x3D:
+			fprintf(stderr, "DEC A\n");
+			return DEC_A;
 			break;
 		case 0x3E:
 			fprintf(stderr, "LD A\n");
@@ -557,6 +625,14 @@ opcode fetchInstruction_CF(const char op) {
 		case 0xE2:
 			fprintf(stderr, "LD C ADDR A\n");
 			return LD_C_ADDR_A;
+			break;
+		case 0xEA:
+			fprintf(stderr, "LD ADDR <- A\n");
+			return LD_ADDR_A;
+			break;
+		case 0xFE:
+			fprintf(stderr, "CP\n");
+			return CP;
 			break;
 		default:
 			break;
