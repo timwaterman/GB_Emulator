@@ -196,6 +196,15 @@ void executeInstruction(registers *regs, opcode op, const char *program) {
 			regs->e = program[regs->pc + 1];
 			regs->pc += 3;
 			break;
+		case INC_DE:
+			if (regs->e != 0xFF)
+				regs->e++;
+			else {
+				regs->d++;
+				regs->e = 0x00;
+			}
+			regs->pc++;
+			break;
 		case RLA: //0x17 Rotate A left
 			clearFlags(regs, ZERO_FLAG | HALF_CARRY_FLAG | SUBTRACT_FLAG);
 
@@ -230,6 +239,31 @@ void executeInstruction(registers *regs, opcode op, const char *program) {
 			regs->h = program[regs->pc + 2];
 			regs->l = program[regs->pc + 1];
 			regs->pc += 3;
+			break;
+		case LD_HL_INC_A: {//0x22, load A into address stored in, then increment the address
+			unsigned short high = regs->h;
+			unsigned short low = regs->l;
+			unsigned short addr = (high << 8) | low;
+
+			writeToMemory_8(addr, regs->a);
+			if (regs->l == 0xFF) {//if we're at the upper limit of l, wrap around
+				regs->h++;
+				regs->l = 0x00;
+			}
+			else
+				regs->l++;
+
+			regs->pc++;
+		}
+		break;
+		case INC_HL:
+			if(regs->l != 0xFF)
+				regs->l++;
+			else {
+				regs->h++;
+				regs->l = 0x00;
+			}
+			regs->pc++;
 			break;
 		case LD_SP: //0x31, LOAD SP
 			regs->sp = program[(regs->pc) + 1]; //store next value in stack pointer
@@ -267,6 +301,10 @@ void executeInstruction(registers *regs, opcode op, const char *program) {
 			regs->pc++;
 		}
 			break;
+		case LD_A_E:
+			regs->a = regs->e;
+			regs->pc++;
+			break;
 		case XOR_A: //0xAF, XOR Register A
 			clearFlags(regs, SUBTRACT_FLAG | HALF_CARRY_FLAG | CARRY_FLAG);
 			regs->a ^= regs->a;
@@ -301,6 +339,16 @@ void executeInstruction(registers *regs, opcode op, const char *program) {
 			regs->sp -= 2;
 			regs->pc++;
 			break;
+		case RET: {//return from function, get the old pc from the top of the stack
+			unsigned char lo = memoryspace[regs->sp] & 0x00FF;
+			unsigned char hi = (memoryspace[regs->sp + 1] & 0xFF00) >> 4;
+			unsigned short slow = lo;
+			unsigned short shigh = hi;
+			unsigned short oldpc = (shigh << 8) | slow;
+			regs->sp += 2;
+			regs->pc = oldpc;
+		}
+		break;
 		case CALL: { //we need to store the next pc in sp - 1 and sp - 2, then move the sp down 2
 			//we then will move the current pc to the address given in the next 16 bit value
 			regs->pc += 3; //go to next instruction
@@ -392,6 +440,10 @@ opcode fetchInstruction_03(const char op) {
 			fprintf(stderr, "LD DE\n");
 			return LD_DE;
 			break;
+		case 0x13:
+			fprintf(stderr, "INC DE\n");
+			return INC_DE;
+			break;
 		case 0x17:
 			fprintf(stderr, "RLA\n");
 			return RLA;
@@ -407,6 +459,14 @@ opcode fetchInstruction_03(const char op) {
 		case 0x21:
 			fprintf(stderr, "LD HL\n");
 			return LD_HL;
+			break;
+		case 0x22:
+			fprintf(stderr, "LD HL INC A\n");
+			return LD_HL_INC_A;
+			break;
+		case 0x23:
+			fprintf(stderr, "INC HL\n");
+			return INC_HL;
 			break;
 		case 0x31:
 			fprintf(stderr, "LD SP\n");
@@ -440,6 +500,10 @@ opcode fetchInstruction_47(const char op) {
 		case 0x77:
 			fprintf(stderr, "LD HL A\n");
 			return LD_HL_A;
+			break;
+		case 0x7B:
+			fprintf(stderr, "LD A E\n");
+			return LD_A_E;
 			break;
 		default:
 			break;
@@ -477,6 +541,10 @@ opcode fetchInstruction_CF(const char op) {
 		case 0xC5:
 			fprintf(stderr, "PUSH BC\n");
 			return PUSH_BC;
+			break;
+		case 0xC9:
+			fprintf(stderr, "RET\n");
+			return RET;
 			break;
 		case 0xCD:
 			fprintf(stderr, "CALL\n");
