@@ -163,11 +163,23 @@ Will not modify the program, only the registers
 void executeInstruction(registers *regs, opcode op, const char *program) {
 
 	switch (op) {
+		case INC_B: //0x04, increment B
+			clearFlags(regs, SUBTRACT_FLAG);
+
+			if(regs->b == 0xFF)
+				setFlags(regs, ZERO_FLAG | HALF_CARRY_FLAG);
+			else
+				clearFlags(regs, ZERO_FLAG | HALF_CARRY_FLAG);
+			regs->b++;
+			regs->pc++;
+			break;
 		case DEC_B: //0x05, decrement B
 			regs->b--;
 			if (regs->b == 0) {
 				setFlags(regs, ZERO_FLAG);
 			}
+			else
+				clearFlags(regs, ZERO_FLAG);
 
 			setFlags(regs, SUBTRACT_FLAG);
 			regs->pc++;
@@ -225,6 +237,12 @@ void executeInstruction(registers *regs, opcode op, const char *program) {
 			}
 			regs->pc++;
 			break;
+
+		case JR: {
+			signed char offset = program[regs->pc + 1];
+			regs->pc += 2 + offset;
+		}
+			break;
 		case LD_A_DE: {//0x1A. Load into A addr stored in DE + 0xFF00
 			unsigned short high = regs->d;
 			unsigned short low = regs->e;
@@ -233,6 +251,10 @@ void executeInstruction(registers *regs, opcode op, const char *program) {
 			readFromMemory_8(&(regs->a), addr);
 			regs->pc++;
 		}
+			break;
+		case LD_E: //0x1E, Load next byte into E
+			regs->e = (unsigned char)program[regs->pc + 1];
+			regs->pc += 2;
 			break;
 		case JR_NZ: {//jump if zero flag is cleared
 			char offset = program[regs->pc + 1]; //the offset is in the next byte
@@ -277,7 +299,7 @@ void executeInstruction(registers *regs, opcode op, const char *program) {
 			signed char offset = program[regs->pc + 1];
 
 			if ((regs->f >> 7) & 1)
-				regs->pc += offset;
+				regs->pc += 2 + offset;
 			else
 				regs->pc += 2;
 		}
@@ -322,6 +344,14 @@ void executeInstruction(registers *regs, opcode op, const char *program) {
 			break;
 		case LD_C_A://0x4F, load contents of A into C
 			regs->c = regs->a;
+			regs->pc++;
+			break;
+		case LD_D_A: //0x57, load A into D
+			regs->d = regs->a;
+			regs->pc++;
+			break;
+		case LD_H_A: //0x67, load A into H
+			regs->h = regs->a;
 			regs->pc++;
 			break;
 		case LD_HL_A: {
@@ -443,8 +473,14 @@ void executeInstruction(registers *regs, opcode op, const char *program) {
 			regs->pc += 3;
 		}
 			break;
+		case LDH_A: {//0xF0, load value located at pc + 1 + $FF00 into A
+			unsigned short addr = program[regs->pc + 1] + 0xFF00;
+			readFromMemory_8(&regs->a, addr);
+			regs->pc += 2;
+		}
+		break;
 		 case CP: //compare value given next to register A, set ZFLAG if equal
-		 	clearFlags(regs, SUBTRACT_FLAG);
+		 	clearFlags(regs, SUBTRACT_FLAG | ZERO_FLAG);
 		 	if( (unsigned char)program[regs->pc + 1] == regs->a)
 		 		setFlags(regs, ZERO_FLAG);
 
@@ -472,6 +508,10 @@ opcode fetchInstruction_03(const char op) {
 	unsigned char hex = op;
 
 	switch (hex) {
+		case 0x04:
+			fprintf(stderr, "INC B\n");
+			return INC_B;
+			break;
 		case 0x05:
 			fprintf(stderr, "DEC B\n");
 			return DEC_B;
@@ -504,9 +544,17 @@ opcode fetchInstruction_03(const char op) {
 			fprintf(stderr, "RLA\n");
 			return RLA;
 			break;
+		case 0x18:
+			fprintf(stderr, "JR\n");
+			return JR;
+			break;
 		case 0x1A:
 			fprintf(stderr, "LD A DE\n");
 			return LD_A_DE;
+			break;
+		case 0x1E:
+			fprintf(stderr, "LD E\n");
+			return LD_E;
 			break;
 		case 0x20:
 			fprintf(stderr, "JR NZ\n");
@@ -564,6 +612,14 @@ opcode fetchInstruction_47(const char op) {
 		case 0x4F:
 			fprintf(stderr, "LD C <- A\n");
 			return LD_C_A;
+			break;
+		case 0x57:
+			fprintf(stderr, "LD D A\n");
+			return LD_D_A;
+			break;
+		case 0x67:
+			fprintf(stderr, "LD H A\n");
+			return LD_H_A;
 			break;
 		case 0x77:
 			fprintf(stderr, "LD HL A\n");
@@ -629,6 +685,10 @@ opcode fetchInstruction_CF(const char op) {
 		case 0xEA:
 			fprintf(stderr, "LD ADDR <- A\n");
 			return LD_ADDR_A;
+			break;
+		case 0xF0:
+			fprintf(stderr, "LDH A\n");
+			return LDH_A;
 			break;
 		case 0xFE:
 			fprintf(stderr, "CP\n");

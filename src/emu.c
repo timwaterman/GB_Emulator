@@ -59,6 +59,7 @@ int main(int argc, char **argv) {
 
 	initRegisters(&regs); //initialize all the registers
 	loadLogo();
+	memoryspace[0xFF44] = 0x90; //init the display to work, ONLY HERE FOR TESTING
 
 
 	while(regs.pc < sizeof buffer) {
