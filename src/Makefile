@@ -1,11 +1,14 @@
+CFLAGS= -c -Wall -g `sdl2-config --cflags`
+LFLAGS= -g -Wall `sdl2-config --libs`
+
 gbemu: emu.o opcodes.o
-	gcc -g -Wall emu.o opcodes.o -o gbemu
+	gcc $(LFLAGS) emu.o opcodes.o -o gbemu
 
 emu.o: emu.c opcodes.h
-	gcc -c -Wall -g emu.c
+	gcc $(CFLAGS) emu.c
 
 opcodes.o: opcodes.c opcodes.h
-	gcc -c -Wall -g opcodes.c
+	gcc $(CFLAGS) opcodes.c
 
 .PHONY: clean all
 

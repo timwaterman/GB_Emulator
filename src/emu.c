@@ -8,6 +8,7 @@ Emulator Main
 #include <stdlib.h>
 #include <string.h>
 #include "opcodes.h"
+#include "SDL.h"
 
 unsigned char *memoryspace;
 
@@ -49,6 +50,11 @@ int main(int argc, char **argv) {
 		die("Fopen failed\n");
 	}
 
+	if (SDL_Init(SDL_INIT_VIDEO|SDL_INIT_AUDIO) != 0) {
+		fprintf(stderr, "SDL_INIT() Failure: %s\n", SDL_GetError());
+		exit(1);
+	}
+
 	//establish size and buffer
 	int size = getSize(rom);
 	char buffer[size];
@@ -71,7 +77,7 @@ int main(int argc, char **argv) {
 		fprintf(stderr, "PC is %u\n", regs.pc);
 	}
 
-	fprintf(stderr, "Size of buffer is %u\n", size);
+	SDL_Quit();
 
 
 	return 0;
