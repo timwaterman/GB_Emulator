@@ -67,7 +67,8 @@ int main(int argc, char **argv) {
 	loadLogo();
 	memoryspace[0xFF44] = 0x90; //init the display to work, ONLY HERE FOR TESTING
 
-
+	SDL_Quit(); //only here because I'm not using the display now
+	
 	while(regs.pc < sizeof buffer) {
 		fprintf(stderr, "PC is %u\n", regs.pc);
 
@@ -77,7 +78,7 @@ int main(int argc, char **argv) {
 		fprintf(stderr, "PC is %u\n", regs.pc);
 	}
 
-	SDL_Quit();
+	
 
 
 	return 0;

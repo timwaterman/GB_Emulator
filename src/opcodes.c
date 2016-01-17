@@ -190,7 +190,7 @@ void executeInstruction(registers *regs, opcode op, const char *program) {
 			break;
 		case INC_C:
 			clearFlags(regs, SUBTRACT_FLAG | ZERO_FLAG);
-			if (regs->c == 0xFF) //if it would wrap
+			if (regs->c == 0x0F) //if it would wrap
 				setFlags(regs, HALF_CARRY_FLAG);
 			regs->c++;
 
@@ -252,6 +252,16 @@ void executeInstruction(registers *regs, opcode op, const char *program) {
 			regs->pc++;
 		}
 			break;
+		case DEC_E:
+			clearFlags(regs, ZERO_FLAG | HALF_CARRY_FLAG);
+			setFlags(regs, SUBTRACT_FLAG);
+			if (regs->e == 0)
+				setFlags(regs, HALF_CARRY_FLAG);
+			regs->e--;
+			if (regs->e == 0)
+				setFlags(regs, ZERO_FLAG);
+			regs->pc++;
+			break;
 		case LD_E: //0x1E, Load next byte into E
 			regs->e = (unsigned char)program[regs->pc + 1];
 			regs->pc += 2;
@@ -293,6 +303,14 @@ void executeInstruction(registers *regs, opcode op, const char *program) {
 				regs->h++;
 				regs->l = 0x00;
 			}
+			regs->pc++;
+			break;
+		case INC_H:
+			clearFlags(regs, SUBTRACT_FLAG | HALF_CARRY_FLAG | ZERO_FLAG);
+			if (regs->h == 0xFF) {
+				setFlags(regs, HALF_CARRY_FLAG | ZERO_FLAG);
+			}
+			regs->h++;
 			regs->pc++;
 			break;
 		case JR_Z: {//0x28, jump if ZEROFLAG is set
@@ -365,6 +383,26 @@ void executeInstruction(registers *regs, opcode op, const char *program) {
 			break;
 		case LD_A_E:
 			regs->a = regs->e;
+			regs->pc++;
+			break;
+		case LD_A_H:
+			regs->a = regs->h;
+			regs->pc++;
+			break;
+		case SUB_B:
+			setFlags(regs, SUBTRACT_FLAG);
+			clearFlags(regs, HALF_CARRY_FLAG | ZERO_FLAG | CARRY_FLAG);
+
+			if ( ((regs->a&0xF) - (regs->b&0xF)) == 0x10) //if we have a half carry
+				setFlags(regs, HALF_CARRY_FLAG);
+
+			//TODO: Implement carry flag
+
+			regs->a = regs->a - regs->b;
+
+			if(regs->a == 0)
+				setFlags(regs, ZERO_FLAG);
+
 			regs->pc++;
 			break;
 		case XOR_A: //0xAF, XOR Register A
@@ -552,6 +590,10 @@ opcode fetchInstruction_03(const char op) {
 			fprintf(stderr, "LD A DE\n");
 			return LD_A_DE;
 			break;
+		case 0x1D:
+			fprintf(stderr, "DEC E\n");
+			return DEC_E;
+			break;
 		case 0x1E:
 			fprintf(stderr, "LD E\n");
 			return LD_E;
@@ -571,6 +613,10 @@ opcode fetchInstruction_03(const char op) {
 		case 0x23:
 			fprintf(stderr, "INC HL\n");
 			return INC_HL;
+			break;
+		case 0x24:
+			fprintf(stderr, "INC H\n");
+			return INC_H;
 			break;
 		case 0x28:
 			fprintf(stderr, "JR Z\n");
@@ -629,6 +675,10 @@ opcode fetchInstruction_47(const char op) {
 			fprintf(stderr, "LD A E\n");
 			return LD_A_E;
 			break;
+		case 0x7C:
+			fprintf(stderr, "LD A H\n");
+			return LD_A_H;
+			break;
 		default:
 			break;
 	}
@@ -642,6 +692,10 @@ opcode fetchInstruction_8B(const char op) {
 	unsigned char hex = op;
 
 	switch (hex) {
+		case 0x90:
+			fprintf(stderr, "SUB B\n");
+			return SUB_B;
+			break;
 		case 0xAF:
 			fprintf(stderr, "XOR A\n");
 			return XOR_A;
